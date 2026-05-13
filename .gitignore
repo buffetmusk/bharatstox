@@ -1,3 +1,4 @@
 debug/
 uploads/
 .DS_Store
+.vercel
