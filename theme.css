@@ -1,0 +1,153 @@
+/* BharatStox — theme tokens */
+
+:root,
+[data-theme="dark"] {
+  --bg: #0A0A0B;
+  --surface: #131316;
+  --elevated: #1C1C20;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #FAFAFA;
+  --text-dim: #A1A1AA;
+  --text-mute: #52525B;
+  --accent: #00E676;
+  --accent-soft: rgba(0, 230, 118, 0.12);
+  --accent-hover: #00C467;
+  --loss: #FF5A5F;
+  --loss-soft: rgba(255, 90, 95, 0.12);
+  --gold: #FFB800;
+  --gold-soft: rgba(255, 184, 0, 0.12);
+  --chart-stroke: #00E676;
+  --chart-fill-top: rgba(0, 230, 118, 0.22);
+  --chart-fill-bottom: rgba(0, 230, 118, 0);
+  --grid: rgba(255, 255, 255, 0.04);
+  --backdrop-tab: rgba(10, 10, 11, 0.72);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-pill: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --elevated: #F4F4F5;
+  --hairline: rgba(0, 0, 0, 0.05);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --text: #0A0A0B;
+  --text-dim: #52525B;
+  --text-mute: #A1A1AA;
+  --accent: #00B85A;
+  --accent-soft: rgba(0, 184, 90, 0.10);
+  --accent-hover: #008A40;
+  --loss: #E5484D;
+  --loss-soft: rgba(229, 72, 77, 0.10);
+  --gold: #C77700;
+  --gold-soft: rgba(199, 119, 0, 0.10);
+  --chart-stroke: #00B85A;
+  --chart-fill-top: rgba(0, 184, 90, 0.18);
+  --chart-fill-bottom: rgba(0, 184, 90, 0);
+  --grid: rgba(0, 0, 0, 0.04);
+  --backdrop-tab: rgba(250, 250, 249, 0.72);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-pill: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --scheme: light;
+}
+
+[data-theme="sepia"] {
+  --bg: #F2EDDF;
+  --surface: #FBF7EA;
+  --elevated: #ECE5D2;
+  --hairline: rgba(58, 42, 18, 0.06);
+  --border: rgba(58, 42, 18, 0.10);
+  --border-strong: rgba(58, 42, 18, 0.22);
+  --text: #2A241B;
+  --text-dim: #6B5E47;
+  --text-mute: #A8957A;
+  --accent: #1F7A4D;
+  --accent-soft: rgba(31, 122, 77, 0.12);
+  --accent-hover: #155F3A;
+  --loss: #B0413E;
+  --loss-soft: rgba(176, 65, 62, 0.12);
+  --gold: #A06B00;
+  --gold-soft: rgba(160, 107, 0, 0.10);
+  --chart-stroke: #1F7A4D;
+  --chart-fill-top: rgba(31, 122, 77, 0.18);
+  --chart-fill-bottom: rgba(31, 122, 77, 0);
+  --grid: rgba(58, 42, 18, 0.05);
+  --backdrop-tab: rgba(242, 237, 223, 0.78);
+  --shadow-card: 0 1px 2px rgba(58, 42, 18, 0.05), 0 8px 24px rgba(58, 42, 18, 0.08);
+  --shadow-pill: 0 1px 2px rgba(58, 42, 18, 0.08);
+  --scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #18181B;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+.mono { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-feature-settings: 'tnum', 'zero'; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* App-internal screen ─ swaps colors per theme */
+.bs-screen {
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: var(--scheme);
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Hide scrollbars in the prototype */
+.bs-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.bs-scroll { scrollbar-width: none; }
+
+/* Pulsing focus indicator for the leaderboard selection */
+@keyframes bs-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.78; }
+}
+@keyframes bs-tick {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.018); }
+  100% { transform: scale(1); }
+}
+@keyframes bs-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bs-ripple {
+  0%   { transform: scale(0.4); opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes bs-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.bs-fade-in { animation: bs-fade-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* selection */
+::selection { background: var(--accent-soft); color: var(--text); }
+
+/* placeholder image style */
+.bs-avatar {
+  background: linear-gradient(135deg, var(--elevated), var(--surface));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-weight: 600;
+  border: 1px solid var(--hairline);
+}
