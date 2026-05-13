@@ -1,294 +1,216 @@
-// screens3.jsx — Analysis + Earn Credits screens
+// screens3.jsx — Analysis waitlist + Earn Credits screens
 /* global React */
-const { useState, useRef } = React;
+const { useState } = React;
 
 // ═══════════════════════════════════════════════════════════════════
-// ANALYSIS — chat interface
+// ANALYSIS — pre-launch waitlist
 // ═══════════════════════════════════════════════════════════════════
 
-const ANALYSIS_CHIPS = [
-  "Why am I underperforming Nifty?",
-  "Which sectors am I missing?",
-  "Am I buying at the wrong time?",
-  "What is dragging my portfolio?",
+const ANALYSIS_FEATURES = [
+  { icon: 'sliders', title: 'Performance breakdown',  desc: 'See exactly how you rank vs traders in your bracket and where the gap comes from.' },
+  { icon: 'arc',     title: 'Sector intelligence',    desc: 'Spot overexposure and gaps in your sector mix compared to top performers.' },
+  { icon: 'flame',   title: 'Trade timing patterns',  desc: 'Find out if you consistently buy high and sell low — and what to do about it.' },
+];
+
+const ANALYSIS_INTERESTS = [
+  'Peer comparison',
+  'Sector gaps',
+  'Entry / exit timing',
+  'Portfolio concentration',
+  'Tax efficiency',
+  'Risk exposure',
 ];
 
 function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
-  const me = window.BS.me;
-  const [msgs, setMsgs]           = useState([
-    { from: 'bot', text: 'Hey ' + me.handle + '! Ask me anything about your portfolio — performance, sectors, timing, concentration, anything.' },
-  ]);
-  const [query, setQuery]         = useState('');
-  const [interim, setInterim]     = useState('');
-  const [listening, setListening] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [email, setEmail]         = useState('');
-  const [done, setDone]           = useState(waitlistSubmitted || false);
-  const recogRef  = useRef(null);
-  const scrollRef = useRef(null);
-  const haptic    = useHaptic();
-  const speechOK  = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const [selected, setSelected] = useState([]);
+  const [phone, setPhone]       = useState('');
+  const [email, setEmail]       = useState('');
+  const [submitted, setSubmitted] = useState(waitlistSubmitted || false);
+  const haptic = useHaptic();
 
-  const displayQuery = query + (interim ? (query ? ' ' : '') + interim : '');
-  const canSend = displayQuery.trim().length > 0 && !analyzing;
+  const canSubmit = phone.trim().length >= 10 && email.trim().length > 3;
 
-  function scrollBottom() {
-    setTimeout(() => {
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, 60);
-  }
-
-  function send() {
-    const q = displayQuery.trim();
-    if (!q || analyzing) return;
-    haptic('success');
-    setMsgs(prev => [...prev, { from: 'user', text: q }]);
-    setQuery('');
-    setInterim('');
-    setAnalyzing(true);
-    scrollBottom();
-    onSubmitWaitlist && onSubmitWaitlist({ query: q });
-  }
-
-  function submitEmail(e) {
-    e.preventDefault();
-    if (!email) return;
-    haptic('confirm');
-    setDone(true);
-    setMsgs(prev => [...prev, { from: 'bot', text: 'Perfect — analysis heading to ' + email + '. We will crunch the numbers and get back to you.' }]);
-    scrollBottom();
-  }
-
-  function fillChip(s) {
-    setQuery(s);
+  function toggleInterest(s) {
     haptic(8);
+    setSelected(prev =>
+      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+    );
   }
 
-  function toggleVoice() {
-    if (listening) { recogRef.current && recogRef.current.stop(); return; }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const r = new SR();
-    r.lang = 'en-IN';
-    r.interimResults = true;
-    r.continuous = false;
-    r.onresult = (e) => {
-      const t = Array.from(e.results).map(x => x[0].transcript).join('');
-      if (e.results[e.results.length - 1].isFinal) {
-        setQuery(prev => (prev ? prev + ' ' : '') + t);
-        setInterim('');
-      } else { setInterim(t); }
-    };
-    r.onend   = () => { setListening(false); setInterim(''); };
-    r.onerror = () => { setListening(false); setInterim(''); };
-    r.start();
-    recogRef.current = r;
-    setListening(true);
-    haptic(10);
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    haptic('confirm');
+    setSubmitted(true);
+    onSubmitWaitlist && onSubmitWaitlist({ phone, email, interests: selected });
+  }
+
+  if (submitted) {
+    return (
+      <div className="bs-screen">
+        <div className="bs-scroll" style={{ flex: 1, overflowY: 'auto', padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{
+            width: 68, height: 68, borderRadius: 999,
+            background: 'var(--accent-soft)', marginBottom: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon name="check" size={32} color="var(--accent)" />
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, marginBottom: 8, textAlign: 'center' }}>
+            You are on the list
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6, textAlign: 'center', marginBottom: 28, maxWidth: 280 }}>
+            We will reach you at {email} when Analysis launches. You will be among the first.
+          </div>
+          {selected.length > 0 && (
+            <div style={{ width: '100%', padding: '14px 16px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--hairline)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-mute)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                Your interests
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {selected.map(s => (
+                  <div key={s} style={{
+                    padding: '5px 12px', borderRadius: 999,
+                    background: 'var(--accent-soft)', border: '1px solid rgba(0,230,118,0.2)',
+                    fontSize: 12.5, color: 'var(--accent)', fontWeight: 600,
+                  }}>{s}</div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-      <style>{`
-        @keyframes bs-mic-pulse {
-          0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.55); }
-          70%  { box-shadow: 0 0 0 18px rgba(239,68,68,0); }
-          100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-        }
-        @keyframes bs-wave {
-          0%,100% { transform: scaleY(0.3); }
-          50%     { transform: scaleY(1.0); }
-        }
-        @keyframes bs-dot {
-          0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
-          30%            { opacity: 1;    transform: scale(1.1); }
-        }
-      `}</style>
+    <div className="bs-screen">
+      <div className="bs-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 0 40px' }}>
 
-      {/* Header */}
-      <div style={{ padding: '0 20px 10px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <Icon name="sparkle" size={20} color="var(--accent)" />
-        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>Analysis</div>
-      </div>
-
-      {/* Chat thread */}
-      <div ref={scrollRef} className="bs-scroll" style={{
-        flex: 1, overflowY: 'auto',
-        padding: '4px 16px 16px',
-        display: 'flex', flexDirection: 'column', gap: 10,
-      }}>
-        {msgs.map((m, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: m.from === 'user' ? 'flex-end' : 'flex-start' }}>
+        {/* Hero */}
+        <div style={{ padding: '4px 20px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Icon name="sparkle" size={20} color="var(--accent)" />
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.6 }}>Analysis</div>
             <div style={{
-              maxWidth: '84%',
-              padding: '10px 14px',
-              borderRadius: m.from === 'user' ? '18px 18px 5px 18px' : '5px 18px 18px 18px',
-              background: m.from === 'user' ? 'var(--accent)' : 'var(--surface)',
-              border: m.from === 'bot' ? '1px solid var(--hairline)' : 'none',
-              color: m.from === 'user' ? '#04140C' : 'var(--text)',
-              fontSize: 14, lineHeight: 1.5,
-            }}>
-              {m.text}
-            </div>
+              marginLeft: 4, padding: '3px 9px', borderRadius: 999,
+              background: 'var(--accent-soft)', border: '1px solid rgba(0,230,118,0.25)',
+              fontSize: 10, fontWeight: 800, color: 'var(--accent)', letterSpacing: 0.5,
+            }}>LAUNCHING SOON</div>
           </div>
-        ))}
-
-        {/* Typing indicator */}
-        {analyzing && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{
-              padding: '12px 16px',
-              borderRadius: '5px 18px 18px 18px',
-              background: 'var(--surface)', border: '1px solid var(--hairline)',
-              display: 'flex', alignItems: 'center', gap: 5,
-            }}>
-              {[0, 1, 2].map(j => (
-                <div key={j} style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: 'var(--accent)',
-                  animation: 'bs-dot 1.3s ease ' + (j * 0.2) + 's infinite',
-                }} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Email collection — appears as a bot message after analyzing starts */}
-        {analyzing && !done && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{
-              maxWidth: '90%',
-              padding: '12px 14px',
-              borderRadius: '5px 18px 18px 18px',
-              background: 'var(--surface)', border: '1px solid var(--hairline)',
-            }}>
-              <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 10, lineHeight: 1.45 }}>
-                Where should I send the analysis?
-              </div>
-              <form onSubmit={submitEmail} style={{ display: 'flex', gap: 7 }}>
-                <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{
-                    flex: 1, height: 38, borderRadius: 10,
-                    border: '1px solid var(--border)', background: 'var(--elevated)',
-                    color: 'var(--text)', fontFamily: 'inherit', fontSize: 13,
-                    padding: '0 11px', boxSizing: 'border-box', outline: 'none',
-                  }}
-                />
-                <button type="submit" style={{
-                  height: 38, padding: '0 14px', borderRadius: 10, border: 'none',
-                  background: email ? 'var(--accent)' : 'var(--elevated)',
-                  color: email ? '#04140C' : 'var(--text-mute)',
-                  fontFamily: 'inherit', fontWeight: 700, fontSize: 13,
-                  cursor: email ? 'pointer' : 'default', transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
-                }}>
-                  Send
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Suggestion chips — only before first send */}
-      {!analyzing && (
-        <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
-            {ANALYSIS_CHIPS.map((s, i) => (
-              <button key={i} onClick={() => fillChip(s)} style={{
-                flexShrink: 0,
-                height: 32, padding: '0 12px', borderRadius: 999,
-                border: '1px solid var(--hairline)',
-                background: 'var(--surface)', color: 'var(--text-dim)',
-                fontFamily: 'inherit', fontSize: 12.5, cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}>
-                {s}
-              </button>
-            ))}
+          <div style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.55 }}>
+            Deep portfolio intelligence — built around how top Indian traders actually think.
           </div>
         </div>
-      )}
 
-      {/* Compose bar */}
-      <div style={{
-        flexShrink: 0,
-        padding: '8px 12px',
-        paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-        borderTop: '0.5px solid var(--hairline)',
-        background: 'var(--backdrop-tab)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        display: 'flex', alignItems: 'flex-end', gap: 8,
-      }}>
-        <div style={{
-          flex: 1,
-          borderRadius: 20,
-          border: '1px solid ' + (listening ? 'rgba(239,68,68,0.5)' : 'var(--border)'),
-          background: 'var(--surface)',
-          display: 'flex', alignItems: 'flex-end', padding: '6px 10px 6px 14px', gap: 6,
-          transition: 'border-color 0.2s',
-        }}>
-          <textarea
-            value={displayQuery}
-            onChange={e => { if (!listening) setQuery(e.target.value); }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={listening ? '' : (analyzing ? 'Ask a follow-up...' : 'Ask about your portfolio...')}
-            rows={1}
+        {/* Feature cards */}
+        <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {ANALYSIS_FEATURES.map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14,
+              padding: '14px 16px', borderRadius: 18,
+              background: 'var(--surface)', border: '1px solid var(--hairline)',
+            }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 13, flexShrink: 0,
+                background: 'var(--elevated)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon name={f.icon} size={19} color="var(--accent)" />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>{f.title}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5 }}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Interest selector */}
+        <div style={{ padding: '0 20px 24px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>
+            What matters most to you?
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {ANALYSIS_INTERESTS.map(s => {
+              const on = selected.includes(s);
+              return (
+                <button key={s} onClick={() => toggleInterest(s)} style={{
+                  padding: '7px 14px', borderRadius: 999,
+                  border: '1px solid ' + (on ? 'rgba(0,230,118,0.35)' : 'var(--hairline)'),
+                  background: on ? 'var(--accent-soft)' : 'var(--surface)',
+                  color: on ? 'var(--accent)' : 'var(--text-dim)',
+                  fontFamily: 'inherit', fontSize: 13, fontWeight: on ? 600 : 400,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}>
+                  {on && <span style={{ marginRight: 5 }}>✓</span>}{s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Contact form */}
+        <form onSubmit={handleSubmit} style={{ padding: '0 20px' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>
+            Notify me when it launches
+          </div>
+
+          {/* Phone */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            border: '1px solid var(--border)', borderRadius: 14,
+            background: 'var(--surface)', marginBottom: 10, overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '0 12px', height: 50,
+              display: 'flex', alignItems: 'center',
+              borderRight: '1px solid var(--hairline)',
+              fontSize: 14, fontWeight: 600, color: 'var(--text-dim)', flexShrink: 0,
+            }}>+91</div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="Mobile number"
+              style={{
+                flex: 1, height: 50, border: 'none', background: 'transparent',
+                color: 'var(--text)', fontFamily: 'inherit', fontSize: 14,
+                padding: '0 14px', outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Email */}
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Email address"
             style={{
-              flex: 1, border: 'none', background: 'transparent',
+              width: '100%', height: 50, borderRadius: 14,
+              border: '1px solid var(--border)', background: 'var(--surface)',
               color: 'var(--text)', fontFamily: 'inherit', fontSize: 14,
-              lineHeight: 1.5, outline: 'none', resize: 'none',
-              padding: '3px 0', maxHeight: 80, overflowY: 'auto',
+              padding: '0 14px', boxSizing: 'border-box', outline: 'none',
+              marginBottom: 14, display: 'block',
             }}
           />
-          {listening && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 18, marginBottom: 3 }}>
-              {[0,1,2,3,4].map(j => (
-                <div key={j} style={{
-                  width: 2.5, borderRadius: 2, background: '#EF4444',
-                  animation: 'bs-wave 0.8s ease ' + (j * 0.1) + 's infinite',
-                  height: '100%',
-                }} />
-              ))}
-            </div>
-          )}
-          {speechOK && (
-            <button onClick={toggleVoice} style={{
-              width: 30, height: 30, borderRadius: 999, border: 'none',
-              background: listening ? '#EF4444' : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0,
-              animation: listening ? 'bs-mic-pulse 1.4s ease infinite' : 'none',
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke={listening ? '#fff' : 'var(--text-mute)'}
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="2" width="6" height="12" rx="3" />
-                <path d="M5 10a7 7 0 0 0 14 0" />
-                <line x1="12" y1="19" x2="12" y2="22" />
-                <line x1="9" y1="22" x2="15" y2="22" />
-              </svg>
-            </button>
-          )}
-        </div>
 
-        <button onClick={send} disabled={!canSend} style={{
-          width: 40, height: 40, borderRadius: 999, border: 'none',
-          background: canSend ? 'var(--accent)' : 'var(--elevated)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: canSend ? 'pointer' : 'default', flexShrink: 0,
-          transition: 'background 0.18s',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke={canSend ? '#04140C' : 'var(--text-mute)'}
-            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="19" x2="12" y2="5" />
-            <polyline points="5 12 12 5 19 12" />
-          </svg>
-        </button>
+          <button type="submit" disabled={!canSubmit} style={{
+            width: '100%', height: 54, borderRadius: 16, border: 'none',
+            background: canSubmit ? 'var(--accent)' : 'var(--elevated)',
+            color: canSubmit ? '#04140C' : 'var(--text-mute)',
+            fontFamily: 'inherit', fontWeight: 700, fontSize: 16,
+            cursor: canSubmit ? 'pointer' : 'default',
+            transition: 'all 0.18s', letterSpacing: -0.2,
+          }}>
+            Join the waitlist
+          </button>
+          <div style={{ fontSize: 11.5, color: 'var(--text-mute)', textAlign: 'center', marginTop: 10 }}>
+            No spam. One message when we launch.
+          </div>
+        </form>
+
       </div>
     </div>
   );
