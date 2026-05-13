@@ -24,29 +24,29 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<!-- ios-haptics: inline implementation of github.com/tijnjh/ios-haptics
-     Uses three pre-created off-screen switch inputs in document.body.
-     Toggling .checked on a switch input triggers UIFeedbackGenerator on iOS 17.4+.
-     Off-screen (not display:none) so iOS rendering engine sees them.
-     Falls back to navigator.vibrate on Android. -->
+<!-- ios-haptics — inline of github.com/tijnjh/ios-haptics
+     iOS fires UIFeedbackGenerator when a click event hits a switch input.
+     label.click() dispatches that event; el.checked= does not. -->
 <script>
 (function () {
-  var _coarse = typeof window.matchMedia === 'function' &&
+  var _ha = typeof window.matchMedia === 'function' &&
     window.matchMedia('(pointer: coarse)').matches;
-  var _els = [null, null, null]; // [selection, confirm, error]
+  var _lbls = [null, null, null];
 
   function _mk() {
-    _els = _els.map(function () {
-      var el = document.createElement('input');
-      el.type = 'checkbox';
-      el.setAttribute('switch', '');
-      el.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;width:1px;height:1px;';
-      document.body.appendChild(el);
-      return el;
+    _lbls = _lbls.map(function () {
+      var lbl = document.createElement('label');
+      lbl.ariaHidden = 'true';
+      lbl.style.display = 'none';
+      var inp = document.createElement('input');
+      inp.type = 'checkbox';
+      inp.setAttribute('switch', '');
+      lbl.appendChild(inp);
+      document.body.appendChild(lbl);
+      return lbl;
     });
   }
 
-  // Create elements as soon as body is ready
   if (document.body) { _mk(); }
   else { document.addEventListener('DOMContentLoaded', _mk); }
 
@@ -57,9 +57,9 @@
         if (i === 2) { navigator.vibrate([50, 70, 50, 70, 50]); return; }
         navigator.vibrate(50); return;
       }
-      if (!_coarse) return;
-      var el = _els[i];
-      if (el) el.checked = !el.checked;
+      if (!_ha) return;
+      var lbl = _lbls[i];
+      if (lbl) lbl.click();
     } catch (e) {}
   }
 
@@ -68,7 +68,7 @@
   haptic.error   = function () { _fire(2); setTimeout(function () { _fire(2); }, 120); setTimeout(function () { _fire(2); }, 240); };
 
   window._iosHaptic = haptic;
-  window._supportsHaptics = _coarse;
+  window._supportsHaptics = _ha;
 })();
 </script>
 
