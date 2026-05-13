@@ -3,18 +3,34 @@
 const { useState, useRef } = React;
 
 // ═══════════════════════════════════════════════════════════════════
-// ANALYSIS — product preview + text/voice compose input
+// ANALYSIS — compose-first tool interface
 // ═══════════════════════════════════════════════════════════════════
-function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
-  const [query, setQuery]       = useState('');
-  const [interim, setInterim]   = useState('');
-  const [listening, setListening] = useState(false);
-  const [email, setEmail]       = useState('');
-  const [submitted, setSubmitted] = useState(waitlistSubmitted || false);
-  const recogRef  = useRef(null);
-  const haptic    = useHaptic();
 
+const ANALYSIS_SUGGESTIONS = [
+  "Why am I underperforming Nifty this quarter?",
+  "Which sectors am I over or under-exposed to?",
+  "Am I consistently buying or selling at the wrong time?",
+  "What is the weakest part of my portfolio right now?",
+];
+
+function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
+  const [query, setQuery]           = useState('');
+  const [interim, setInterim]       = useState('');
+  const [listening, setListening]   = useState(false);
+  const [email, setEmail]           = useState('');
+  const [submitted, setSubmitted]   = useState(waitlistSubmitted || false);
+  const [savedQuery, setSavedQuery] = useState('');
+  const recogRef = useRef(null);
+  const haptic   = useHaptic();
   const speechOK = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const displayQuery = query + (interim ? (query ? ' ' : '') + interim : '');
+  const canSend = displayQuery.trim().length > 0;
+
+  function fillPrompt(s) {
+    setQuery(s);
+    haptic(8);
+  }
 
   function toggleVoice() {
     if (listening) {
@@ -46,13 +62,13 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
 
   function handleSend(e) {
     e.preventDefault();
-    if (!email || (!query && !submitted)) return;
+    const q = displayQuery.trim();
+    if (!q) return;
     haptic('success');
+    setSavedQuery(q);
     setSubmitted(true);
-    onSubmitWaitlist && onSubmitWaitlist({ email, query });
+    onSubmitWaitlist && onSubmitWaitlist({ email, query: q });
   }
-
-  const displayQuery = query + (interim ? (query ? ' ' : '') + interim : '');
 
   return (
     <div className="bs-screen">
@@ -69,139 +85,59 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: '0 20px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
+      <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <Icon name="sparkle" size={22} color="var(--accent)" />
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.6 }}>Analysis</div>
-          <div style={{ fontSize: 13, color: 'var(--text-mute)', marginTop: 3 }}>
-            Your portfolio, deeply understood
-          </div>
         </div>
-        <div style={{
-          padding: '4px 10px', borderRadius: 999, marginTop: 4,
-          background: 'var(--elevated)', border: '1px solid var(--hairline)',
-          fontSize: 10.5, fontWeight: 700, color: 'var(--text-mute)', letterSpacing: 0.4,
-          whiteSpace: 'nowrap',
-        }}>COMING SOON</div>
+        <div style={{ fontSize: 13, color: 'var(--text-mute)', paddingLeft: 2 }}>
+          Ask anything about your portfolio
+        </div>
       </div>
 
-      <div className="bs-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 0 32px' }}>
+      <div className="bs-scroll" style={{ flex: 1, overflowY: 'auto', padding: '0 20px 40px' }}>
 
-        {/* Locked insight preview cards */}
-        <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-          {/* Card 1 */}
-          <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--hairline)', background: 'var(--surface)', position: 'relative' }}>
-            <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid var(--hairline)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', letterSpacing: -0.1 }}>How you compare to 7,700 traders</div>
-            </div>
-            <div style={{ padding: '12px 14px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', height: 48 }}>
-                {[55,70,62,80,72,88,76,95,84,100,90,96].map((h, i) => (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
-                    <div style={{ height: `${h * 0.55}%`, background: 'var(--accent)', borderRadius: '2px 2px 0 0' }} />
-                    <div style={{ height: `${h * 0.32}%`, background: 'var(--text-mute)', borderRadius: '2px 2px 0 0', opacity: 0.5 }} />
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 10 }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>● You  +102.7%</span>
-                <span style={{ color: 'var(--text-mute)' }}>● Bracket avg  +67.3%</span>
-              </div>
-            </div>
-            <LockedOverlay />
-          </div>
-
-          {/* Card 2 */}
-          <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--hairline)', background: 'var(--surface)', position: 'relative' }}>
-            <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid var(--hairline)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Sector exposure vs smart money</div>
-            </div>
-            <div style={{ padding: '12px 14px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
-              {['IT / Tech', 'Banking', 'Energy', 'Consumer', 'Pharma'].map((s, i) => (
-                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-                  <div style={{ width: 68, fontSize: 10.5, color: 'var(--text-dim)', flexShrink: 0 }}>{s}</div>
-                  <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--elevated)' }}>
-                    <div style={{ width: `${[82,61,44,38,27][i]}%`, height: '100%', borderRadius: 3, background: [1,3].includes(i) ? 'var(--accent)' : 'var(--text-mute)', opacity: 0.75 }} />
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: [1,3].includes(i) ? 'var(--accent)' : 'var(--text-mute)', width: 36, textAlign: 'right' }}>
-                    {['+28%','–12%','+6%','+19%','–8%'][i]}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <LockedOverlay />
-          </div>
-
-          {/* Card 3 */}
-          <div style={{ borderRadius: 18, overflow: 'hidden', border: '1px solid var(--hairline)', background: 'var(--surface)', position: 'relative' }}>
-            <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid var(--hairline)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Where to improve</div>
-            </div>
-            <div style={{ padding: '12px 14px', filter: 'blur(5px)', userSelect: 'none', pointerEvents: 'none' }}>
-              {[
-                { dot: 'var(--accent)', text: 'Over-indexed in IT vs bracket avg by 2.3×' },
-                { dot: '#F59E0B',       text: 'Missing Banking rally — top performers are 18% allocated' },
-                { dot: 'var(--accent)', text: 'Your timing on exits is in the top 15%' },
-                { dot: '#EF4444',       text: 'Energy positions entered at a 12% premium' },
-              ].map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
-                  <div style={{ width: 7, height: 7, borderRadius: 999, background: p.dot, marginTop: 4, flexShrink: 0 }} />
-                  <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.45 }}>{p.text}</div>
-                </div>
-              ))}
-            </div>
-            <LockedOverlay />
-          </div>
-        </div>
-
-        {/* Compose section */}
         {submitted ? (
-          <div style={{ padding: '0 20px 24px', textAlign: 'center' }}>
+          /* ── Confirmation ── */
+          <div style={{ paddingTop: 20 }}>
             <div style={{
-              width: 56, height: 56, borderRadius: 999,
-              background: 'var(--accent-soft)', margin: '0 auto 14px',
+              width: 60, height: 60, borderRadius: 999,
+              background: 'var(--accent-soft)', margin: '0 auto 16px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Icon name="check" size={26} color="var(--accent)" />
+              <Icon name="check" size={28} color="var(--accent)" />
             </div>
-            <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.4, marginBottom: 6 }}>Saved — you're first in line</div>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.55 }}>
-              We'll personalise the analysis around your question and reach you at <strong>{email}</strong> the day we launch.
+            <div style={{ textAlign: 'center', fontSize: 20, fontWeight: 700, letterSpacing: -0.4, marginBottom: 6 }}>
+              Question saved
             </div>
-            {query ? (
-              <div style={{
-                marginTop: 16, padding: '12px 16px', borderRadius: 14,
-                background: 'var(--surface)', border: '1px solid var(--hairline)',
-                fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5,
-                fontStyle: 'italic', textAlign: 'left',
-              }}>"{query}"</div>
-            ) : null}
+            <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 20 }}>
+              {email
+                ? "We'll reach you at " + email + " when analysis launches."
+                : "We'll notify you when analysis launches."}
+            </div>
+            <div style={{
+              padding: '14px 16px', borderRadius: 16,
+              background: 'var(--surface)', border: '1px solid var(--hairline)',
+              fontSize: 14, color: 'var(--text)', lineHeight: 1.5, fontStyle: 'italic',
+            }}>
+              "{savedQuery}"
+            </div>
           </div>
         ) : (
-          <div style={{ padding: '0 20px' }}>
-
-            {/* Divider label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-              <span style={{ fontSize: 11, color: 'var(--text-mute)', fontWeight: 600, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
-                ASK YOUR QUESTION
-              </span>
-              <div style={{ flex: 1, height: 1, background: 'var(--hairline)' }} />
-            </div>
-
+          /* ── Compose ── */
+          <>
             {/* Compose card */}
             <div style={{
               borderRadius: 20,
-              border: `1.5px solid ${listening ? 'rgba(239,68,68,0.4)' : 'var(--border)'}`,
+              border: '1.5px solid ' + (listening ? 'rgba(239,68,68,0.4)' : 'var(--border)'),
               background: 'var(--surface)',
               transition: 'border-color 0.2s',
-              marginBottom: 12,
+              marginBottom: 20,
             }}>
-              {/* Text area */}
               <textarea
                 value={displayQuery}
                 onChange={e => { if (!listening) setQuery(e.target.value); }}
-                placeholder={listening ? '' : 'e.g. "Why am I underperforming vs Nifty?" or "Which sectors am I missing?"'}
+                placeholder={listening ? '' : "What do you want to know about your portfolio?"}
                 rows={4}
                 style={{
                   width: '100%', border: 'none', background: 'transparent',
@@ -211,20 +147,17 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
                   outline: 'none', resize: 'none', display: 'block',
                 }}
               />
-
-              {/* Bottom row — status + mic */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '8px 12px 12px', gap: 10,
               }}>
-                {/* Waveform / hint */}
                 {listening ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 18 }}>
                       {[0,1,2,3,4].map(i => (
                         <div key={i} style={{
                           width: 3, borderRadius: 2, background: '#EF4444',
-                          animation: `bs-wave 0.8s ease ${i * 0.12}s infinite`,
+                          animation: 'bs-wave 0.8s ease ' + (i * 0.12) + 's infinite',
                           height: '100%',
                         }} />
                       ))}
@@ -233,11 +166,9 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
                   </div>
                 ) : (
                   <span style={{ fontSize: 12, color: 'var(--text-mute)' }}>
-                    {speechOK ? 'Type or tap the mic to speak' : 'Describe what you want to know'}
+                    {speechOK ? 'Type or tap the mic' : 'Type your question'}
                   </span>
                 )}
-
-                {/* Mic button */}
                 {speechOK && (
                   <button type="button" onClick={toggleVoice} style={{
                     width: 44, height: 44, borderRadius: 999, border: 'none', flexShrink: 0,
@@ -260,29 +191,56 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
               </div>
             </div>
 
-            {/* Email + send row */}
+            {/* Suggestion prompts */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-mute)', marginBottom: 10, letterSpacing: 0.1 }}>
+                Try asking
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {ANALYSIS_SUGGESTIONS.map((s, i) => (
+                  <button key={i} onClick={() => fillPrompt(s)} style={{
+                    textAlign: 'left',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 12,
+                    padding: '11px 14px',
+                    background: 'var(--surface)',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: 'var(--text-dim)',
+                    fontFamily: 'inherit',
+                    lineHeight: 1.45,
+                  }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Email + send */}
             <form onSubmit={handleSend}>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="Your email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="Email to get notified when live"
                   style={{
-                    flex: 1, height: 48, borderRadius: 14,
+                    flex: 1, height: 46, borderRadius: 14,
                     border: '1px solid var(--border)', background: 'var(--surface)',
-                    color: 'var(--text)', fontFamily: 'inherit', fontSize: 14,
+                    color: 'var(--text)', fontFamily: 'inherit', fontSize: 13.5,
                     padding: '0 14px', boxSizing: 'border-box', outline: 'none',
                   }}
                 />
-                <button type="submit" style={{
-                  height: 48, padding: '0 20px', borderRadius: 14, border: 'none',
-                  background: email ? 'var(--accent)' : 'var(--elevated)',
-                  color: email ? '#04140C' : 'var(--text-mute)',
+                <button type="submit" disabled={!canSend} style={{
+                  height: 46, padding: '0 18px', borderRadius: 14, border: 'none',
+                  background: canSend ? 'var(--accent)' : 'var(--elevated)',
+                  color: canSend ? '#04140C' : 'var(--text-mute)',
                   fontFamily: 'inherit', fontWeight: 700, fontSize: 14,
-                  cursor: email ? 'pointer' : 'default',
+                  cursor: canSend ? 'pointer' : 'default',
                   transition: 'all 0.18s',
-                  display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                  display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                  Notify me
+                  Send
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" />
@@ -290,32 +248,9 @@ function AnalysisScreen({ waitlistSubmitted, onSubmitWaitlist }) {
                   </svg>
                 </button>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-mute)', marginTop: 8, paddingBottom: 4 }}>
-                No spam · one notification when analysis goes live.
-              </div>
             </form>
-          </div>
+          </>
         )}
-      </div>
-    </div>
-  );
-}
-
-function LockedOverlay() {
-  return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      background: 'linear-gradient(180deg, transparent 0%, var(--bg) 70%)',
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start',
-      padding: '10px 14px',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 5,
-        background: 'var(--elevated)', border: '1px solid var(--hairline)',
-        borderRadius: 999, padding: '4px 10px',
-      }}>
-        <Icon name="lock" size={10} color="var(--text-mute)" />
-        <span style={{ fontSize: 10.5, color: 'var(--text-mute)', fontWeight: 600 }}>Personalised on launch</span>
       </div>
     </div>
   );
