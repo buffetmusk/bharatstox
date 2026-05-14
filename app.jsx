@@ -240,8 +240,9 @@ function Toast({ msg }) {
 // ─── Bottom bar with center FAB ──────────────────────────────
 function TabBtn({ tb, active, onChange }) {
   const isActive = tb.name === active;
+  const haptic = useHaptic();
   return (
-    <button onClick={() => onChange(tb.name)} style={{
+    <button onClick={() => { haptic(); onChange(tb.name); }} style={{
       flex: 1, background: 'transparent', border: 0, padding: '2px 2px',
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
       color: isActive ? 'var(--text)' : 'var(--text-mute)',
@@ -266,6 +267,7 @@ function TabBtn({ tb, active, onChange }) {
 }
 
 function BottomBar({ active, onChange, unreadCount }) {
+  const haptic = useHaptic();
   const leftTabs = [
     { name: 'leaderboard', label: 'Leaders', icon: 'leaderboard' },
     { name: 'refer',       label: 'Invite',  icon: 'gift' },
@@ -277,7 +279,7 @@ function BottomBar({ active, onChange, unreadCount }) {
   return (
     <div style={{ position: 'relative', overflow: 'visible', flexShrink: 0, zIndex: 50 }}>
       {/* Center FAB — sits half above, half inside the tab row */}
-      <button onClick={() => onChange('analysis')} style={{
+      <button onClick={() => { haptic(12); onChange('analysis'); }} style={{
         position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)',
         width: 60, height: 60, borderRadius: 999,
         background: active === 'analysis' ? 'var(--accent)' : 'var(--surface)',

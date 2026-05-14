@@ -8,6 +8,7 @@ const { useState, useEffect, useRef, useMemo } = React;
 function Onboarding({ onDone }) {
   const [step, setStep] = useState(0);
   const fmt = window.BS.fmt;
+  const haptic = useHaptic();
 
   const slides = [
     {
@@ -58,7 +59,7 @@ function Onboarding({ onDone }) {
       </div>
       {/* actions */}
       <div style={{ padding: '22px 24px 8px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onDone} style={{
+        <button onClick={() => { haptic(); onDone(); }} style={{
           background: 'transparent', border: 0, color: 'var(--text-mute)',
           fontFamily: 'inherit', fontSize: 14, fontWeight: 500, cursor: 'pointer',
           padding: '8px 4px',
@@ -252,8 +253,9 @@ function PortfolioScreen({ data, isMe = false, onBack, requestedRefresh, onReque
         {!isMe && (
           <Button
             size="sm"
+            haptic="success"
             variant={requestedRefresh ? 'secondary' : 'primary'}
-            onClick={() => { if (!requestedRefresh) { haptic('success'); onRequestRefresh && onRequestRefresh(); } }}
+            onClick={() => { if (!requestedRefresh) { onRequestRefresh && onRequestRefresh(); } }}
             icon={<Icon name={requestedRefresh ? 'check' : 'arc'} size={14} />}
           >
             {requestedRefresh ? 'Requested' : 'Request Refresh'}
@@ -262,8 +264,9 @@ function PortfolioScreen({ data, isMe = false, onBack, requestedRefresh, onReque
         {isMe && (
           <Button
             size="sm"
+            haptic="success"
             variant={selfRefreshUsed ? 'secondary' : 'primary'}
-            onClick={() => { if (!selfRefreshUsed) { haptic('success'); onSelfRefresh && onSelfRefresh(); } }}
+            onClick={() => { if (!selfRefreshUsed) { onSelfRefresh && onSelfRefresh(); } }}
             icon={<Icon name={selfRefreshUsed ? 'check' : 'arc'} size={14} />}
             style={selfRefreshUsed ? { opacity: 0.6 } : {}}
           >
@@ -327,7 +330,7 @@ function PortfolioScreen({ data, isMe = false, onBack, requestedRefresh, onReque
         <div style={{ padding: '0 20px 4px' }}>
           <div style={{ display: 'flex', gap: 18, borderBottom: '1px solid var(--hairline)' }}>
             {['overview','holdings','activity'].map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
+              <button key={t} onClick={() => { if (t !== tab) haptic(); setTab(t); }} style={{
                 padding: '10px 0', background: 'transparent', border: 0, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2,
                 color: tab === t ? 'var(--text)' : 'var(--text-mute)',
@@ -458,8 +461,10 @@ function ReferScreen({ me, network, invites, onBack, onShowToast }) {
   const fmt = window.BS.fmt;
   const [copied, setCopied] = useState(false);
   const link = `bharatstox.app/i/${me.referralCode}`;
+  const haptic = useHaptic();
 
   function copy() {
+    haptic();
     try { navigator.clipboard?.writeText(link); } catch {}
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);

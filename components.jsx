@@ -124,9 +124,10 @@ function TopBar({ leading, trailing, title, subtitle, dense = false }) {
 
 // ─── Round icon button ─────────────────────────────────────
 function IconBtn({ children, onClick, active = false, size = 36 }) {
+  const haptic = useHaptic();
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => { haptic(); onClick && onClick(e); }}
       style={{
         width: size, height: size, borderRadius: 999,
         border: '1px solid var(--hairline)',
@@ -144,6 +145,7 @@ function IconBtn({ children, onClick, active = false, size = 36 }) {
 // ─── Segmented control ─────────────────────────────────────
 function Segmented({ value, options, onChange, fullWidth = true }) {
   const ref = useRef(null);
+  const haptic = useHaptic();
   const [thumb, setThumb] = useState({ left: 0, width: 0 });
   useLayoutEffect(() => {
     const el = ref.current?.querySelector(`[data-seg="${value}"]`);
@@ -171,7 +173,7 @@ function Segmented({ value, options, onChange, fullWidth = true }) {
         return (
           <button key={v}
             data-seg={v}
-            onClick={() => onChange(v)}
+            onClick={() => { if (v !== value) haptic(); onChange(v); }}
             style={{
               position: 'relative', flex: 1, padding: '7px 8px',
               background: 'transparent', border: 0, cursor: 'pointer',
@@ -277,7 +279,8 @@ function useHaptic() {
 }
 
 // ─── Primary button ─────────────────────────────────────────
-function Button({ children, onClick, variant = 'primary', size = 'md', icon, full = false, style = {} }) {
+function Button({ children, onClick, variant = 'primary', size = 'md', icon, full = false, style = {}, haptic: hapticType = 'selection' }) {
+  const haptic = useHaptic();
   const sizes = {
     sm: { h: 32, px: 12, fs: 13, gap: 6 },
     md: { h: 44, px: 16, fs: 14, gap: 8 },
@@ -290,7 +293,7 @@ function Button({ children, onClick, variant = 'primary', size = 'md', icon, ful
     danger:    { bg: 'var(--loss-soft)', color: 'var(--loss)', border: 'transparent' },
   }[variant];
   return (
-    <button onClick={onClick} style={{
+    <button onClick={(e) => { haptic(hapticType); onClick && onClick(e); }} style={{
       height: sizes.h, padding: `0 ${sizes.px}px`,
       borderRadius: 999, border: `1px solid ${variants.border}`,
       background: variants.bg, color: variants.color,
@@ -322,8 +325,9 @@ function Stat({ label, value, sub, align = 'left' }) {
 
 // ─── Credits chip (pill in top right) ──────────────────────
 function CreditsPill({ value, onClick }) {
+  const haptic = useHaptic();
   return (
-    <button onClick={onClick} style={{
+    <button onClick={(e) => { haptic(); onClick && onClick(e); }} style={{
       height: 30, padding: '0 11px',
       borderRadius: 999,
       border: '1px solid var(--border)',

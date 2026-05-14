@@ -492,6 +492,7 @@ function BracketPill({ label, value }) {
 // ─── Bottom action bar ───────────────────────────────────────────────
 function ActionBar({ row, credits, onOpen, onUnlock, sortMode = 'value', rows, gainsRanked, onOpenEarnCredits }) {
   const fmt = window.BS.fmt;
+  const haptic = useHaptic();
   if (!row) return null;
   const { locked, isMe: me } = row;
   const isGains = sortMode === 'gains';
@@ -559,7 +560,7 @@ function ActionBar({ row, credits, onOpen, onUnlock, sortMode = 'value', rows, g
           </span>
         </button>
         {!enough && onOpenEarnCredits && (
-          <button onClick={onOpenEarnCredits} style={{
+          <button onClick={() => { haptic(); onOpenEarnCredits(); }} style={{
             display: 'block', width: '100%', marginTop: 6,
             background: 'none', border: 'none', padding: '2px 0',
             color: 'var(--text-mute)', fontSize: 11.5, fontWeight: 500,
@@ -660,7 +661,7 @@ function UnlockSheet({ row, credits, onConfirm, onCancel, onEarn }) {
         {/* Buttons */}
         {enough ? (
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onCancel} style={{
+            <button onClick={() => { haptic(); onCancel(); }} style={{
               flex: 1, height: 52, borderRadius: 16, border: '1px solid var(--border)',
               background: 'var(--surface)', color: 'var(--text-dim)',
               fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer',
@@ -676,12 +677,12 @@ function UnlockSheet({ row, credits, onConfirm, onCancel, onEarn }) {
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onCancel} style={{
+            <button onClick={() => { haptic(); onCancel(); }} style={{
               flex: 1, height: 52, borderRadius: 16, border: '1px solid var(--border)',
               background: 'var(--surface)', color: 'var(--text-dim)',
               fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer',
             }}>Cancel</button>
-            <button onClick={() => { onCancel(); onEarn && onEarn(); }} style={{
+            <button onClick={() => { haptic(); onCancel(); onEarn && onEarn(); }} style={{
               flex: 2, height: 52, borderRadius: 16, border: 'none',
               background: 'var(--gold-soft)', color: 'var(--gold)',
               fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer',

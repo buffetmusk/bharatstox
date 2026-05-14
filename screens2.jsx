@@ -8,6 +8,7 @@ const { useState, useMemo } = React;
 function ProfileScreen({ me, brokers, theme, onChangeTheme, onOpenCreditLog, onOpenBrokers, onOpenMyPortfolio, onOpenEarnCredits, onLogout }) {
   const fmt = window.BS.fmt;
   const connected = brokers.filter(b => b.connected);
+  const haptic = useHaptic();
 
   return (
     <div className="bs-screen">
@@ -42,7 +43,7 @@ function ProfileScreen({ me, brokers, theme, onChangeTheme, onOpenCreditLog, onO
 
         {/* Earn Credits */}
         <div style={{ padding: '0 20px 14px' }}>
-          <button onClick={onOpenEarnCredits} style={{
+          <button onClick={() => { haptic(); onOpenEarnCredits(); }} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 12,
             padding: '14px 16px',
             background: 'var(--surface)', borderRadius: 18,
@@ -145,8 +146,9 @@ function Section({ label, children }) {
 }
 
 function ProfileStat({ label, value, sub, divider, onClick, clickable }) {
+  const haptic = useHaptic();
   return (
-    <div onClick={onClick} style={{
+    <div onClick={onClick ? (e) => { haptic(); onClick(e); } : undefined} style={{
       padding: '14px 14px',
       borderLeft: divider ? '1px solid var(--hairline)' : 'none',
       cursor: clickable ? 'pointer' : 'default',
@@ -159,8 +161,9 @@ function ProfileStat({ label, value, sub, divider, onClick, clickable }) {
 }
 
 function Row({ left, title, subtitle, right, divider, onClick }) {
+  const haptic = useHaptic();
   return (
-    <div onClick={onClick} style={{
+    <div onClick={onClick ? (e) => { haptic(); onClick(e); } : undefined} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '14px 16px',
       borderBottom: divider ? '1px solid var(--hairline)' : 'none',
@@ -178,8 +181,9 @@ function Row({ left, title, subtitle, right, divider, onClick }) {
 
 function MiniToggle({ defaultOn }) {
   const [on, setOn] = useState(defaultOn);
+  const haptic = useHaptic();
   return (
-    <button onClick={() => setOn(!on)} style={{
+    <button onClick={() => { haptic(); setOn(!on); }} style={{
       width: 40, height: 24, borderRadius: 999,
       background: on ? 'var(--accent)' : 'var(--elevated)',
       border: 0, position: 'relative', cursor: 'pointer', padding: 0,
@@ -207,8 +211,9 @@ function ThemeSwatch({ label, theme, active, onClick }) {
     light: { bg: '#FAFAF9', surf: '#FFFFFF', accent: '#00B85A', text: '#0A0A0B' },
     sepia: { bg: '#F2EDDF', surf: '#FBF7EA', accent: '#1F7A4D', text: '#2A241B' },
   }[theme];
+  const haptic = useHaptic();
   return (
-    <button onClick={onClick} style={{
+    <button onClick={(e) => { haptic(); onClick && onClick(e); }} style={{
       padding: 0, border: '0', background: 'transparent',
       cursor: 'pointer', fontFamily: 'inherit',
       display: 'flex', flexDirection: 'column', gap: 6,
@@ -295,6 +300,7 @@ function BrokerRow({ broker, onToggle, divider }) {
 // ═══════════════════════════════════════════════════════════════════
 function CreditLogScreen({ me, log, onBack, onOpenEarnCredits }) {
   const [filter, setFilter] = useState('all');
+  const haptic = useHaptic();
   const filtered = log.filter(l => filter === 'all' || (filter === 'earn' ? l.amount > 0 : l.amount < 0));
 
   // Group by date prefix
@@ -329,7 +335,7 @@ function CreditLogScreen({ me, log, onBack, onOpenEarnCredits }) {
             <BracketPill label="Unlocks" value={String(log.filter(l => l.label.includes('Unlocked')).length)} />
           </div>
           {onOpenEarnCredits && (
-            <button onClick={onOpenEarnCredits} style={{
+            <button onClick={() => { haptic(); onOpenEarnCredits(); }} style={{
               marginTop: 12, background: 'none', border: 'none', padding: 0,
               color: 'var(--accent)', fontSize: 12.5, fontWeight: 600,
               cursor: 'pointer', fontFamily: 'inherit',
@@ -398,12 +404,13 @@ function NotificationsScreen({ notifications, onBack, showBack = false }) {
   const [filter, setFilter] = useState('all');
   const filtered = notifications.filter(n => filter === 'all' || n.kind === filter);
   const unread = notifications.filter(n => n.unread).length;
+  const haptic = useHaptic();
 
   return (
     <div className="bs-screen">
       <TopBar
         leading={showBack ? <IconBtn onClick={onBack}><Icon name="back" size={18} /></IconBtn> : <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.6 }}>Activity</div>}
-        trailing={unread > 0 ? <button style={{ background: 'transparent', border: 0, color: 'var(--accent)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Mark read</button> : null}
+        trailing={unread > 0 ? <button onClick={() => haptic()} style={{ background: 'transparent', border: 0, color: 'var(--accent)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>Mark read</button> : null}
         title={showBack ? 'Activity' : undefined}
       />
       <div style={{ padding: '8px 20px 12px' }}>
