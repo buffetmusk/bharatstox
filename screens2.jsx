@@ -19,7 +19,7 @@ function ProfileScreen({ me, brokers, theme, onChangeTheme, onOpenCreditLog, onO
       <div className="bs-scroll" style={{ flex: 1, overflowY: 'auto', padding: '4px 0 110px' }}>
         {/* Identity */}
         <div style={{ padding: '12px 20px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Avatar initial={me.handle[0]} tone="mint" size={64} ring />
+          <Avatar seed={me.handle} size={64} ring />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.4 }}>{me.handle}</div>
             <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 3 }}>Anonymous · Joined Apr 2026</div>

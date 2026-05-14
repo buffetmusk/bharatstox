@@ -138,6 +138,37 @@ body {
 
 .bs-fade-in { animation: bs-fade-in 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
+/* ── Celebrations: hand-rolled confetti + 3D coins ── */
+/* Outer particle: arced burst (up to --peak, then down to --dy) + fade.
+   Keeps translate(-50%,-50%) so the particle is centred on its origin. */
+@keyframes bs-coin-fall {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+  12%  { opacity: 1; }
+  40%  { transform: translate(calc(-50% + var(--dx) * 0.65), calc(-50% + var(--peak))) scale(1); }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.9); opacity: 0; }
+}
+/* Inner coin: continuous 3D flip */
+@keyframes bs-coin-spin {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+/* Inner confetti: flutter wobble */
+@keyframes bs-confetti-fall {
+  0%   { transform: rotateZ(-28deg); }
+  50%  { transform: rotateZ(28deg); }
+  100% { transform: rotateZ(-28deg); }
+}
+/* Celebration card / number reveal */
+@keyframes bs-burst-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  55%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.bs-coin-fall { animation: bs-coin-fall 2s cubic-bezier(0.2, 0.6, 0.3, 1) both; will-change: transform, opacity; }
+.bs-coin-spin { animation: bs-coin-spin 0.7s linear infinite; transform-style: preserve-3d; }
+.bs-confetti-fall { animation: bs-confetti-fall 0.5s ease-in-out infinite; }
+.bs-burst-pop { animation: bs-burst-pop 0.5s cubic-bezier(0.34, 1.4, 0.5, 1) both; }
+
 /* selection */
 ::selection { background: var(--accent-soft); color: var(--text); }
 

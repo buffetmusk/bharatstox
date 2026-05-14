@@ -14,14 +14,15 @@ function App() {
   const [onboarded, setOnboarded] = useState(false);
   const [stack, setStack] = useState([{ name: 'leaderboard' }]);
   const [tab, setTab] = useState('leaderboard');
-  const [credits, setCredits] = useState(window.BS.me.credits);
+  const credits = useCredits(); // single source of truth — call once, here only
   const [following, setFollowing] = useState(new Set());
-  const [unlocked, setUnlocked] = useState(new Set());
   const [toast, setToast] = useState(null);
   const [leaderboardSort, setLeaderboardSort] = useState('value');
   const [requestedRefresh, setRequestedRefresh] = useState(new Set()); // set of trader handles
   const [selfRefreshUsed, setSelfRefreshUsed] = useState(false);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [celebratingSignup, setCelebratingSignup] = useState(false);
+  const [referralCelebration, setReferralCelebration] = useState(null);
   const haptic = useHaptic();
 
   const tabScreens = ['leaderboard', 'refer', 'analysis', 'notifications', 'profile']; // analysis shown via AnalysisStrip
@@ -54,12 +55,13 @@ function App() {
   }
 
   function handleUnlock(row) {
-    if (credits < row.unlockCost) {
-      showToast(`Need ${row.unlockCost - credits} more credits`);
+    const label = `Unlocked ${row.handle} · ₹${window.BS.fmt.inrCompact(row.portfolio)}`;
+    const ok = credits.spend(label, row.unlockCost, { unlockHandle: row.handle });
+    if (!ok) {
+      showToast(`Need ${row.unlockCost - credits.balance} more credits`);
       return;
     }
-    setCredits(c => c - row.unlockCost);
-    setUnlocked(s => { const n = new Set(s); n.add(row.handle); return n; });
+    credits.earn('First unlock bonus', 50, { onceKey: 'firstUnlock' });
     haptic(25);
     showToast(`Unlocked ${row.handle} · −${row.unlockCost} ◎`);
     setTimeout(() => navigate('trader', { handle: row.handle }), 280);
@@ -75,8 +77,13 @@ function App() {
   }
 
   function handleRequestRefresh(handle) {
+    if (!credits.spend(`Requested refresh · ${handle}`, 50)) {
+      showToast(`Need ${50 - credits.balance} more credits`);
+      return;
+    }
     setRequestedRefresh(s => new Set(s).add(handle));
-    showToast(`Refresh request sent to ${handle}`);
+    haptic(15);
+    showToast(`Refresh request sent · −50 ◎`);
   }
 
   function handleSelfRefresh() {
@@ -84,11 +91,25 @@ function App() {
     showToast('Portfolio synced · next refresh in 24h');
   }
 
+  // Referral bonus — fires when a referred friend connects their portfolio.
+  // In this prototype that moment is simulated by the user claiming a pending
+  // invite on the Refer screen. App owns the earn so the celebration popup
+  // can hook in here.
+  function claimReferral(invite) {
+    const ok = credits.earn(`Referral · ${invite.handle} joined`, 500, { onceKey: 'ref:' + invite.handle });
+    if (!ok) return;
+    haptic('confirm');
+    setReferralCelebration({ handle: invite.handle, amount: 500 });
+  }
+
   // Onboarding
   if (!onboarded && !t.skipOnboarding) {
     return (
       <AppFrame theme={t.theme} showFrame={t.showFrame} setTweak={setTweak} t={t}>
-        <Onboarding onDone={() => setOnboarded(true)} />
+        <Onboarding onDone={() => {
+          setOnboarded(true);
+          if (!credits.claimed.signupCelebrated) setCelebratingSignup(true);
+        }} />
       </AppFrame>
     );
   }
@@ -101,7 +122,7 @@ function App() {
       <Leaderboard
         rows={window.BS.rows}
         me={window.BS.me}
-        credits={credits}
+        credits={credits.balance}
         sort={leaderboardSort}
         onChangeSort={setLeaderboardSort}
         onOpenTrader={handleOpenTrader}
@@ -120,7 +141,17 @@ function App() {
   } else if (top.name === 'earn-credits') {
     screen = (
       <EarnCreditsScreen
-        credits={credits}
+        credits={credits.balance}
+        claimed={credits.claimed}
+        streakCount={credits.streakCount}
+        checkedInToday={credits.checkedInToday}
+        onClaim={(label, amount, onceKey) => {
+          if (credits.earn(label, amount, { onceKey })) { haptic('confirm'); showToast(`Earned +${amount} ◎`); }
+        }}
+        onCheckin={() => {
+          if (credits.claimDailyCheckin()) { haptic('confirm'); showToast('Checked in · +10 ◎'); }
+        }}
+        onOpenRefer={() => navigate('refer')}
         onBack={back}
       />
     );
@@ -130,6 +161,8 @@ function App() {
         me={window.BS.me}
         network={window.BS.network}
         invites={window.BS.invites}
+        claimed={credits.claimed}
+        onClaimReferral={claimReferral}
         onBack={back}
         onShowToast={showToast}
       />
@@ -139,7 +172,7 @@ function App() {
   } else if (top.name === 'profile') {
     screen = (
       <ProfileScreen
-        me={{ ...window.BS.me, credits }}
+        me={{ ...window.BS.me, credits: credits.balance }}
         brokers={window.BS.brokers}
         theme={t.theme}
         onChangeTheme={v => setTweak('theme', v)}
@@ -166,7 +199,14 @@ function App() {
         onBack={back}
         requestedRefresh={requestedRefresh.has(handle)}
         onRequestRefresh={() => handleRequestRefresh(handle)}
-        onAlert={() => showToast('Alert set for ' + handle)}
+        onAlert={() => {
+          if (credits.spend('Price alert · ' + handle, 15)) {
+            haptic(12);
+            showToast('Alert set · −15 ◎');
+          } else {
+            showToast(`Need ${15 - credits.balance} more credits`);
+          }
+        }}
       />
     );
   } else if (top.name === 'my-portfolio') {
@@ -188,13 +228,18 @@ function App() {
           const b = window.BS.brokers.find(x => x.id === id);
           if (b) { b.connected = !b.connected; b.syncedAt = b.connected ? 'Just now' : null; }
           haptic(15);
-          showToast(b.connected ? `${b.name} connected` : `${b.name} disconnected`);
+          if (b && b.connected) {
+            const granted = credits.earn(`Connected portfolio · ${b.name}`, 500, { onceKey: 'portfolioConnected' });
+            showToast(granted ? `${b.name} connected · +500 ◎` : `${b.name} connected`);
+          } else {
+            showToast(b ? `${b.name} disconnected` : '');
+          }
         }}
       />
     );
   } else if (top.name === 'credit-log') {
     screen = (
-      <CreditLogScreen me={{...window.BS.me, credits}} log={window.BS.creditLog} onBack={back} onOpenEarnCredits={() => navigate('earn-credits')} />
+      <CreditLogScreen me={{...window.BS.me, credits: credits.balance}} log={credits.log} onBack={back} onOpenEarnCredits={() => navigate('earn-credits')} />
     );
   }
 
@@ -214,6 +259,22 @@ function App() {
           />
         )}
         {toast && <Toast msg={toast} />}
+        {referralCelebration && (
+          <ReferralPopup
+            handle={referralCelebration.handle}
+            amount={referralCelebration.amount}
+            onDone={() => setReferralCelebration(null)}
+          />
+        )}
+        {celebratingSignup && (
+          <SignupCelebration
+            amount={500}
+            onDone={() => {
+              credits.markClaimed('signupCelebrated');
+              setCelebratingSignup(false);
+            }}
+          />
+        )}
       </div>
     </AppFrame>
   );
@@ -396,6 +457,12 @@ function Tweaks({ t, setTweak }) {
                    onChange={v => setTweak('showFrame', v)} />
       <TweakToggle label="Skip onboarding" value={t.skipOnboarding}
                    onChange={v => setTweak('skipOnboarding', v)} />
+      <TweakSection label="Credits" />
+      <TweakButton label="Reset credits" secondary
+                   onClick={() => {
+                     try { localStorage.removeItem('bharatstox.credits.v1'); } catch (e) {}
+                     location.reload();
+                   }} />
     </TweaksPanel>
   );
 }

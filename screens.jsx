@@ -241,7 +241,7 @@ function PortfolioScreen({ data, isMe = false, onBack, requestedRefresh, onReque
 
       {/* Identity */}
       <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Avatar initial={data.handle[0]} tone={isMe ? 'mint' : 'sky'} size={48} />
+        <Avatar seed={data.handle} size={48} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: -0.4 }}>{data.handle}</div>
           <div style={{ fontSize: 12, color: 'var(--text-mute)', marginTop: 1 }}>
@@ -457,7 +457,7 @@ function ActivityList({ items }) {
 // ═══════════════════════════════════════════════════════════════════
 // REFER & EARN
 // ═══════════════════════════════════════════════════════════════════
-function ReferScreen({ me, network, invites, onBack, onShowToast }) {
+function ReferScreen({ me, network, invites, claimed = {}, onClaimReferral, onBack, onShowToast }) {
   const fmt = window.BS.fmt;
   const [copied, setCopied] = useState(false);
   const link = `bharatstox.app/i/${me.referralCode}`;
@@ -484,7 +484,7 @@ function ReferScreen({ me, network, invites, onBack, onShowToast }) {
             <span style={{ color: 'var(--text)' }}> for every friend who joins.</span>
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--text-dim)', marginTop: 8, lineHeight: 1.5 }}>
-            Credits unlock portfolios above your bracket. Friends get 200 ◎ on signup.
+            Credits unlock portfolios above your bracket. Friends get 500 ◎ when they join.
           </div>
         </div>
 
@@ -540,13 +540,17 @@ function ReferScreen({ me, network, invites, onBack, onShowToast }) {
                 padding: '14px 14px',
                 borderBottom: i === invites.length - 1 ? 'none' : '1px solid var(--hairline)',
               }}>
-                <Avatar initial={inv.handle[0].toUpperCase()} tone={inv.status === 'joined' ? 'mint' : 'sand'} size={32} />
+                <Avatar seed={inv.handle} size={32} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.handle}</div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-mute)', marginTop: 1 }}>{inv.status === 'joined' ? `Joined ${inv.joinedOn}` : `Invited ${inv.joinedOn} · awaiting signup`}</div>
                 </div>
                 {inv.status === 'joined' ? (
                   <div className="tnum" style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>+{inv.credits} ◎</div>
+                ) : claimed['ref:' + inv.handle] ? (
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)', flexShrink: 0 }}>Claimed ✓</span>
+                ) : onClaimReferral ? (
+                  <Button size="sm" variant="primary" onClick={() => onClaimReferral(inv)}>Claim +500 ◎</Button>
                 ) : (
                   <div style={{
                     fontSize: 10.5, padding: '4px 8px', borderRadius: 999,
@@ -564,7 +568,7 @@ function ReferScreen({ me, network, invites, onBack, onShowToast }) {
 }
 
 // Network viz — portfolio comparison bar chart within your circle
-function NetworkViz({ network }) {
+function NetworkViz({ network, me }) {
   const fmt = window.BS.fmt;
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -638,16 +642,7 @@ function NetworkViz({ network }) {
                 {i + 1}
               </div>
               {/* Avatar */}
-              <div style={{
-                width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                background: `${color}1A`,
-                color: color, fontSize: 10.5, fontWeight: 800,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${color}40`,
-                boxSizing: 'border-box',
-              }}>
-                {isYou ? 'Y' : person.handle[0]}
-              </div>
+              <Avatar seed={isYou ? me.handle : person.handle} size={28} />
               {/* Bar + labels */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>

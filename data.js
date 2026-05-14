@@ -26,12 +26,11 @@
   // ── User ──
   const me = {
     handle: 'Tigerstripe',
-    avatar: { initial: 'T', tone: 'mint' },
     portfolio: 1235380,
     portfolioDelta: 84120,
     portfolioDeltaPct: 7.31,
     invested: 609_000,        // total capital deployed
-    credits: 580,
+    credits: 500,
     bracket: '10–15 L',
     rank: 8412,
     pctile: 76,
@@ -84,16 +83,13 @@
     const allGainPct = +gainBase.toFixed(1);
     return {
       handle,
-      avatar: { initial: handle[0], tone: tones[i % tones.length] },
       portfolio: v,
       day,
       allGainPct,
       followers: Math.round(20 + Math.pow(v / 1e5, 0.55) * 12),
       isMe,
       locked: i < userIdx,
-      unlockCost: i < userIdx
-        ? Math.min(2000, Math.max(40, Math.round(40 + Math.log10(v / me.portfolio) * 280)))
-        : 0,
+      unlockCost: i < userIdx ? 100 : 0,
     };
   });
 
@@ -157,7 +153,6 @@
 
   const traderDetail = {
     handle: 'Northstar',
-    avatar: { initial: 'N', tone: 'sky' },
     portfolio: 2_590_000,
     invested: 890_000,
     deltas: {
@@ -269,8 +264,8 @@
   const invites = [
     { handle: 'Heron',       status: 'joined',  joinedOn: '12 May', credits: 500 },
     { handle: 'Saffron',     status: 'joined',  joinedOn: '04 May', credits: 500 },
-    { handle: 'Drift',       status: 'joined',  joinedOn: '28 Apr', credits: 500 },
-    { handle: 'Quill',       status: 'joined',  joinedOn: '19 Apr', credits: 500 },
+    { handle: 'Drift',       status: 'pending', joinedOn: '28 Apr', credits: 0 },
+    { handle: 'Quill',       status: 'pending', joinedOn: '19 Apr', credits: 0 },
     { handle: '+91 ••• 4421',status: 'pending', joinedOn: '14 May', credits: 0 },
     { handle: 'rohan@…',     status: 'pending', joinedOn: '11 May', credits: 0 },
   ];
@@ -284,17 +279,10 @@
   ];
 
   // ── Credit log ──
+  // Fresh-account seed — the live log (earn/spend events) is built at runtime
+  // by the useCredits hook and persisted to localStorage.
   const creditLog = [
-    { kind: 'earn',  label: 'Referral · Quill joined',      amount: +500, at: 'Today · 09:14' },
-    { kind: 'spend', label: 'Unlocked Northstar · ₹25.9L',  amount: -180, at: 'Yesterday · 17:42' },
-    { kind: 'spend', label: 'Unlocked Magnolia · ₹62L',     amount: -340, at: 'Yesterday · 11:08' },
-    { kind: 'earn',  label: 'Daily streak · 7 days',        amount: +50,  at: 'Yesterday · 09:00' },
-    { kind: 'earn',  label: 'Referral · Drift joined',      amount: +500, at: '28 Apr · 14:22' },
-    { kind: 'spend', label: 'Unlocked Bluefin · ₹1.4 Cr',  amount: -420, at: '24 Apr · 19:55' },
-    { kind: 'earn',  label: 'Weekly check-in bonus',        amount: +20,  at: '22 Apr · 09:00' },
-    { kind: 'spend', label: 'Set price alert · RELIANCE',   amount: -10,  at: '21 Apr · 14:30' },
-    { kind: 'earn',  label: 'Referral · Saffron joined',    amount: +500, at: '04 Apr · 11:18' },
-    { kind: 'earn',  label: 'Sign-up bonus',                amount: +250, at: '02 Apr · 18:00' },
+    { kind: 'earn', label: 'Sign-up bonus', amount: +500, at: 'Today · 09:00' },
   ];
 
   // ── Notifications ──
@@ -338,23 +326,27 @@
   };
 
   // ── Earn credits content ──
+  // Earn rows carry an `action` key the EarnCreditsScreen uses to render the
+  // right control: 'claim' = claimable button, 'refer' = navigates to Refer,
+  // 'auto' = granted automatically by an in-app action (informational row).
   const earnCredits = {
     earnWays: [
-      { icon: 'gift',    label: 'Refer a friend',    reward: '+500 ◎', desc: 'Per friend who joins and links a broker' },
-      { icon: 'flame',   label: 'Daily streak',      reward: '+5–50 ◎', desc: 'Bonus grows every consecutive day' },
-      { icon: 'check',   label: 'Complete profile',  reward: '+100 ◎', desc: 'One-time, set handle + avatar' },
-      { icon: 'arc',     label: 'Link broker',       reward: '+200 ◎', desc: 'Per broker connected (up to 3)' },
-      { icon: 'sparkle', label: 'Portfolio refresh', reward: '+20 ◎',  desc: 'Each time your data syncs' },
+      { icon: 'gift',    label: 'Refer a friend',        reward: '+500 ◎', desc: 'When a friend joins and connects their portfolio', action: 'refer' },
+      { icon: 'arc',     label: 'Connect your portfolio', reward: '+500 ◎', desc: 'One-time, when you link your first broker',       action: 'auto', key: 'portfolioConnected' },
+      { icon: 'check',   label: 'Complete profile',      reward: '+60 ◎',  desc: 'One-time — set your handle + avatar',             action: 'claim', key: 'completeProfile' },
+      { icon: 'flame',   label: 'Daily check-in',        reward: '+10 ◎',  desc: 'Once every day you open BharatStox',              action: 'checkin' },
+      { icon: 'sparkle', label: 'First unlock',          reward: '+50 ◎',  desc: 'One-time bonus the first time you check a portfolio', action: 'auto', key: 'firstUnlock' },
     ],
     spendWays: [
-      { icon: 'lock',  label: 'Unlock portfolios', cost: '40–2,000 ◎', desc: 'Higher bracket = more credits' },
-      { icon: 'bell',  label: 'Price alerts',      cost: '10 ◎',       desc: 'Per alert created' },
-      { icon: 'spark', label: 'Premium analysis',  cost: '150 ◎/mo',   desc: 'Coming soon' },
+      { icon: 'lock',  label: 'Check another portfolio', cost: '100 ◎',     desc: 'Unlock any locked trader in the leaderboard' },
+      { icon: 'arc',   label: 'Request a refresh',       cost: '50 ◎',      desc: 'Ask a trader to sync their latest holdings' },
+      { icon: 'bell',  label: 'Price alerts',            cost: '15 ◎',      desc: 'Per alert created' },
+      { icon: 'spark', label: 'Premium analysis',        cost: '120 ◎/mo',  desc: 'Coming soon' },
     ],
     economics: [
-      { label: 'Avg credits earned / referral', value: '500 ◎' },
-      { label: 'Avg unlock cost',               value: '~240 ◎' },
-      { label: 'Credits from 3 referrals',      value: '1,500 ◎ → ~6 unlocks' },
+      { label: 'Sign up + connect your portfolio', value: '1,000 ◎' },
+      { label: '1 referral',                       value: '500 ◎ ≈ 5 unlocks' },
+      { label: 'Checking another portfolio',       value: '100 ◎' },
     ],
   };
 

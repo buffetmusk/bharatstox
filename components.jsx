@@ -4,28 +4,118 @@ const { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } = R
 
 const fmt = window.BS.fmt;
 
-// ─── Avatar ────────────────────────────────────────────────
-function Avatar({ initial = 'A', tone = 'mint', size = 32, ring = false }) {
-  const tones = {
-    mint:  ['#0F3024', '#00E676'],
-    gold:  ['#332311', '#FFB800'],
-    rose:  ['#321216', '#FF8095'],
-    sky:   ['#0E2238', '#5AB6FF'],
-    lilac: ['#221636', '#B58CFF'],
-    amber: ['#311E07', '#FFA53D'],
-    sand:  ['#2A2317', '#D8B07A'],
-    teal:  ['#0C2A2A', '#4DD0C2'],
+// ─── Procedural avatar ─────────────────────────────────────
+// Deterministic, faux-3D SVG avatar generated from a seed string (the user's
+// handle). Same seed → same avatar, always. Fully offline, no external service.
+const AV_PALETTES = [
+  { disc: ['#1b4a36', '#081f15'], body: ['#7CFFC4', '#00B25A'] },
+  { disc: ['#4a3a12', '#1f1808'], body: ['#FFE08A', '#E09A00'] },
+  { disc: ['#4a1f28', '#1f0c11'], body: ['#FFB3C0', '#E84B6B'] },
+  { disc: ['#163b5c', '#0a1c2e'], body: ['#A9DBFF', '#3B8FE0'] },
+  { disc: ['#3a2a5c', '#180f2e'], body: ['#D9C2FF', '#9A6BE0'] },
+  { disc: ['#4a3010', '#1f1408'], body: ['#FFCB8A', '#E07B2B'] },
+  { disc: ['#0f3f3c', '#06201e'], body: ['#9DEDE3', '#2BB9A8'] },
+  { disc: ['#4a2418', '#1f0f0a'], body: ['#FFC2A6', '#E86A3B'] },
+];
+const AV_PUPIL = '#1b1b22';
+
+function hashSeed(seed) {
+  let h = 2166136261;
+  const s = String(seed);
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function avatarTraits(seed) {
+  const h = hashSeed(seed || 'anon');
+  return {
+    h,
+    palette: AV_PALETTES[h % AV_PALETTES.length],
+    body: (h >> 4) % 5,
+    eyes: (h >> 8) % 5,
+    mouth: (h >> 12) % 4,
+    accent: (h >> 16) % 4,
+    rot: ((h >> 20) % 7) - 3, // slight -3..3° tilt for character
   };
-  const [bg, fg] = tones[tone] || tones.mint;
+}
+
+function avBody(idx) {
+  switch (idx) {
+    case 0: return <circle cx="50" cy="54" r="29" />;
+    case 1: return <rect x="22" y="26" width="56" height="56" rx="20" />;
+    case 2: return <path d="M50 24C70 24 80 38 80 55C80 73 66 82 50 82C34 82 20 73 20 55C20 38 30 24 50 24Z" />;
+    case 3: return <polygon points="50,24 76,39 76,69 50,84 24,69 24,39" />;
+    default: return <path d="M24 31Q24 26 29 26L71 26Q76 26 76 31L76 56Q76 76 50 84Q24 76 24 56Z" />;
+  }
+}
+
+function avEyes(idx) {
+  const p = AV_PUPIL;
+  switch (idx) {
+    case 0: return <g fill={p}><circle cx="40" cy="48" r="4.5" /><circle cx="60" cy="48" r="4.5" /></g>;
+    case 1: return <g><ellipse cx="40" cy="48" rx="5" ry="6.5" fill="#fff" /><ellipse cx="60" cy="48" rx="5" ry="6.5" fill="#fff" /><circle cx="40" cy="49" r="2.6" fill={p} /><circle cx="60" cy="49" r="2.6" fill={p} /></g>;
+    case 2: return <g fill="none" stroke={p} strokeWidth="2.6" strokeLinecap="round"><path d="M34 48Q40 53 46 48" /><path d="M54 48Q60 53 66 48" /></g>;
+    case 3: return <g><circle cx="40" cy="48" r="5.5" fill="#fff" stroke={p} strokeWidth="1.6" /><circle cx="60" cy="48" r="5.5" fill="#fff" stroke={p} strokeWidth="1.6" /><circle cx="40" cy="48" r="2.2" fill={p} /><circle cx="60" cy="48" r="2.2" fill={p} /></g>;
+    default: return <g><circle cx="50" cy="48" r="11" fill="#fff" /><circle cx="50" cy="48" r="4.8" fill={p} /></g>;
+  }
+}
+
+function avMouth(idx) {
+  const p = AV_PUPIL;
+  switch (idx) {
+    case 0: return <path d="M42 64Q50 72 58 64" fill="none" stroke={p} strokeWidth="2.6" strokeLinecap="round" />;
+    case 1: return <line x1="44" y1="66" x2="56" y2="66" stroke={p} strokeWidth="2.6" strokeLinecap="round" />;
+    case 2: return <ellipse cx="50" cy="66" rx="4" ry="5" fill={p} />;
+    default: return <path d="M43 66Q51 70 58 63" fill="none" stroke={p} strokeWidth="2.6" strokeLinecap="round" />;
+  }
+}
+
+function avAccent(idx, bodyDark) {
+  switch (idx) {
+    case 1: return <g><circle cx="74" cy="27" r="7.5" fill="#FFB800" stroke="rgba(0,0,0,.25)" strokeWidth="1.2" /><path d="M74 23.5l1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z" fill="#fff" /></g>;
+    case 2: return <g><line x1="50" y1="25" x2="50" y2="13" stroke={bodyDark} strokeWidth="2.6" strokeLinecap="round" /><circle cx="50" cy="11" r="3.6" fill={bodyDark} /></g>;
+    case 3: return <g fill="#FF7A9C" opacity="0.55"><ellipse cx="33" cy="59" rx="5" ry="3" /><ellipse cx="67" cy="59" rx="5" ry="3" /></g>;
+    default: return null;
+  }
+}
+
+function Avatar({ seed = 'anon', size = 32, ring = false }) {
+  const t = avatarTraits(seed);
+  const uid = 'av' + t.h.toString(36);
+  const [bL, bD] = t.palette.body;
+  const [dL, dD] = t.palette.disc;
   return (
     <div className="bs-avatar"
          style={{
-           width: size, height: size, borderRadius: 999,
-           background: `radial-gradient(circle at 30% 30%, ${fg}24, ${bg})`,
-           color: fg, fontSize: size * 0.42, lineHeight: 1,
-           boxShadow: ring ? `0 0 0 2px var(--bg), 0 0 0 3.5px ${fg}` : 'none',
+           width: size, height: size, borderRadius: 999, overflow: 'hidden',
+           boxShadow: ring ? `0 0 0 2px var(--bg), 0 0 0 3.5px ${bD}` : 'none',
          }}>
-      {initial}
+      <svg width={size} height={size} viewBox="0 0 100 100" style={{ display: 'block' }}>
+        <defs>
+          <radialGradient id={uid + 'd'} cx="0.32" cy="0.28" r="0.95">
+            <stop offset="0%" stopColor={dL} />
+            <stop offset="100%" stopColor={dD} />
+          </radialGradient>
+          <linearGradient id={uid + 'b'} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={bL} />
+            <stop offset="100%" stopColor={bD} />
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="50" fill={`url(#${uid}d)`} />
+        <ellipse cx="50" cy="86" rx="23" ry="5.5" fill="rgba(0,0,0,0.28)" />
+        <g transform={`rotate(${t.rot} 50 54)`}>
+          <g fill={`url(#${uid}b)`} stroke="rgba(0,0,0,0.22)" strokeWidth="1.5">
+            {avBody(t.body)}
+          </g>
+          {avEyes(t.eyes)}
+          {avMouth(t.mouth)}
+          {avAccent(t.accent, bD)}
+        </g>
+        <ellipse cx="37" cy="31" rx="27" ry="16" fill="#fff" opacity="0.16" />
+      </svg>
     </div>
   );
 }
@@ -276,6 +366,128 @@ function useHaptic() {
     const pat = typeof type === 'number' ? [type] : (patterns[type] || [type]);
     try { navigator.vibrate(pat); } catch {}
   }, []);
+}
+
+// ─── Credits engine ────────────────────────────────────────
+// Single source of truth for the credit economy: balance, the unlocked-trader
+// set, and the transaction log — all persisted to localStorage.
+//
+// IMPORTANT: useCredits() must be called exactly ONCE, at the top of App().
+// The returned `creditsApi` is prop-drilled down. Calling it in more than one
+// component creates independent, desynced states.
+const CREDITS_KEY = 'bharatstox.credits.v1';
+
+function seedCreditsState() {
+  return {
+    balance: window.BS.me.credits,
+    unlocked: [],
+    log: window.BS.creditLog.slice(),
+    claimed: {},
+    lastCheckinDate: null,
+    streakCount: 0,
+    seededVersion: 1,
+  };
+}
+
+function loadCreditsState() {
+  try {
+    const raw = localStorage.getItem(CREDITS_KEY);
+    if (!raw) return seedCreditsState();
+    return { ...seedCreditsState(), ...JSON.parse(raw) };
+  } catch (e) {
+    return seedCreditsState();
+  }
+}
+
+function saveCreditsState(state) {
+  try {
+    localStorage.setItem(CREDITS_KEY, JSON.stringify(state));
+  } catch (e) {
+    // private mode / quota exceeded — stay in-memory for the session
+  }
+}
+
+function makeEntry(kind, label, amount) {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  return { kind, label, amount, at: `Today · ${hh}:${mm}` };
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function useCredits() {
+  const [state, setState] = useState(loadCreditsState);
+  const ref = useRef(state);
+  ref.current = state;
+
+  useEffect(() => { saveCreditsState(state); }, [state]);
+
+  // earn(label, amount, { onceKey }) — onceKey guards one-time grants.
+  // Returns true if granted, false if the onceKey was already claimed.
+  const earn = useCallback((label, amount, opts = {}) => {
+    const s = ref.current;
+    if (opts.onceKey && s.claimed[opts.onceKey]) return false;
+    setState(prev => ({
+      ...prev,
+      balance: prev.balance + amount,
+      log: [makeEntry('earn', label, amount), ...prev.log],
+      claimed: opts.onceKey ? { ...prev.claimed, [opts.onceKey]: true } : prev.claimed,
+    }));
+    return true;
+  }, []);
+
+  // spend(label, cost, { unlockHandle }) — no-op + false if balance < cost.
+  // If unlockHandle is already unlocked, succeeds without re-charging.
+  const spend = useCallback((label, cost, opts = {}) => {
+    const s = ref.current;
+    if (opts.unlockHandle && s.unlocked.includes(opts.unlockHandle)) return true;
+    if (s.balance < cost) return false;
+    setState(prev => ({
+      ...prev,
+      balance: prev.balance - cost,
+      log: [makeEntry('spend', label, -cost), ...prev.log],
+      unlocked: opts.unlockHandle
+        ? Array.from(new Set([...prev.unlocked, opts.unlockHandle]))
+        : prev.unlocked,
+    }));
+    return true;
+  }, []);
+
+  // claimDailyCheckin() — flat +10, at most once per calendar day.
+  const claimDailyCheckin = useCallback(() => {
+    const s = ref.current;
+    const today = todayKey();
+    if (s.lastCheckinDate === today) return false;
+    const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    const streak = s.lastCheckinDate === yesterday ? s.streakCount + 1 : 1;
+    setState(prev => ({
+      ...prev,
+      balance: prev.balance + 10,
+      streakCount: streak,
+      lastCheckinDate: today,
+      log: [makeEntry('earn', `Daily check-in · ${streak} day${streak > 1 ? 's' : ''}`, 10), ...prev.log],
+    }));
+    return true;
+  }, []);
+
+  const markClaimed = useCallback((key) => {
+    setState(prev => prev.claimed[key] ? prev : { ...prev, claimed: { ...prev.claimed, [key]: true } });
+  }, []);
+
+  const resetCredits = useCallback(() => setState(seedCreditsState()), []);
+
+  return {
+    balance: state.balance,
+    log: state.log,
+    unlocked: new Set(state.unlocked),
+    claimed: state.claimed,
+    streakCount: state.streakCount,
+    checkedInToday: state.lastCheckinDate === todayKey(),
+    earn, spend, claimDailyCheckin, markClaimed, resetCredits,
+  };
 }
 
 // ─── Primary button ─────────────────────────────────────────
@@ -538,8 +750,138 @@ function GainHero({ gainPct, gainAbs, label }) {
   );
 }
 
+// ─── Celebrations — hand-rolled confetti + 3D coins ────────
+// Zero-dependency particle burst: each particle is an outer div (arced
+// trajectory via bs-coin-fall + per-particle CSS vars) wrapping an inner
+// div (3D coin flip, or confetti flutter). Parent controls lifetime.
+const BS_CONFETTI_COLORS = ['#00E676', '#FFB800', '#FF8095', '#5AB6FF', '#B58CFF'];
+
+function CoinBurst({ count = 26, originX = 50, originY = 40 }) {
+  const particles = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < count; i++) {
+      const isCoin = i % 3 !== 0; // ~2/3 coins, ~1/3 confetti
+      arr.push({
+        i, isCoin,
+        dx: (Math.random() - 0.5) * 340,
+        peak: -(70 + Math.random() * 150),
+        dy: 230 + Math.random() * 260,
+        delay: Math.random() * 0.35,
+        dur: 1.5 + Math.random() * 1.1,
+        spin: 0.45 + Math.random() * 0.5,
+        size: isCoin ? 13 + Math.random() * 12 : 7 + Math.random() * 6,
+        color: BS_CONFETTI_COLORS[i % BS_CONFETTI_COLORS.length],
+      });
+    }
+    return arr;
+  }, [count]);
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 1 }}>
+      {particles.map(p => (
+        <div key={p.i} className="bs-coin-fall" style={{
+          position: 'absolute', left: originX + '%', top: originY + '%',
+          '--dx': p.dx + 'px', '--peak': p.peak + 'px', '--dy': p.dy + 'px',
+          animationDelay: p.delay + 's', animationDuration: p.dur + 's',
+        }}>
+          {p.isCoin ? (
+            <div className="bs-coin-spin" style={{
+              width: p.size, height: p.size, borderRadius: '50%',
+              animationDuration: p.spin + 's',
+              background: 'radial-gradient(circle at 35% 30%, #FFE9A8, #FFB800 55%, #C77F00)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.35), inset 0 0 0 1.5px rgba(255,255,255,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#7A4F00', fontSize: p.size * 0.62, fontWeight: 800,
+            }}>◎</div>
+          ) : (
+            <div className="bs-confetti-fall" style={{
+              width: p.size, height: p.size * 0.45, borderRadius: 2, background: p.color,
+            }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Full-screen sign-up celebration — revealed once, after first onboarding.
+function SignupCelebration({ amount, onDone }) {
+  const haptic = useHaptic();
+  useEffect(() => {
+    haptic('confirm');
+    const id = setTimeout(() => haptic(), 420);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 120,
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <CoinBurst count={32} originY={36} />
+      <div className="bs-burst-pop" style={{
+        position: 'relative', zIndex: 2, textAlign: 'center', maxWidth: 320,
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 28, padding: '30px 26px',
+        boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 22, margin: '0 auto 14px',
+          background: 'var(--gold-soft)', border: '1px solid rgba(255,184,0,0.35)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
+        }}>◎</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-mute)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          Welcome to BharatStox
+        </div>
+        <div className="tnum" style={{ fontSize: 50, fontWeight: 800, color: 'var(--gold)', letterSpacing: -2, lineHeight: 1.15, margin: '4px 0 2px' }}>
+          +{amount} ◎
+        </div>
+        <div style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: 22 }}>
+          Your sign-up bonus is in. Spend it checking out the bigger portfolios above you.
+        </div>
+        <Button full size="lg" variant="primary" haptic="success" onClick={onDone}>Let's go</Button>
+      </div>
+    </div>
+  );
+}
+
+// Transient referral-joined popup — auto-dismisses, or tap anywhere.
+function ReferralPopup({ handle, amount, onDone }) {
+  const haptic = useHaptic();
+  useEffect(() => {
+    haptic('confirm');
+    const id = setTimeout(onDone, 2800);
+    return () => clearTimeout(id);
+  }, []);
+  return (
+    <div onClick={onDone} style={{
+      position: 'absolute', inset: 0, zIndex: 115,
+      background: 'rgba(0,0,0,0.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <CoinBurst count={20} originY={46} />
+      <div className="bs-burst-pop" style={{
+        position: 'relative', zIndex: 2, textAlign: 'center', maxWidth: 300,
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 24, padding: '24px 26px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{ fontSize: 34, marginBottom: 4 }}>🎉</div>
+        <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.3 }}>{handle} joined!</div>
+        <div className="tnum" style={{ fontSize: 30, fontWeight: 800, color: 'var(--gold)', marginTop: 6, letterSpacing: -1 }}>
+          +{amount} ◎
+        </div>
+        <div style={{ fontSize: 12.5, color: 'var(--text-mute)', marginTop: 4 }}>
+          Referral bonus added to your balance
+        </div>
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   Avatar, Icon, Money, Delta, Card, TopBar, IconBtn, Segmented, AreaChart,
-  Button, Stat, CreditsPill, useHaptic,
+  Button, Stat, CreditsPill, useHaptic, useCredits,
   DualLineChart, SplitBar, SectorBars, GainHero,
+  CoinBurst, SignupCelebration, ReferralPopup,
 });

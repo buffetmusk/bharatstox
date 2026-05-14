@@ -87,9 +87,13 @@ function Leaderboard({ rows, me, credits, onOpenTrader, onSpendCredits, onTabBar
 
   function notifyActiveChange(newIdx) {
     if (newIdx !== S.activeIdx) {
+      // One detent tick per row crossed. A fast flick or snap can jump
+      // several indices between RAF frames — tick for each so every row
+      // passing the center is felt, like a real iOS picker drum.
+      const crossed = Math.abs(newIdx - S.activeIdx);
       S.activeIdx = newIdx;
       setActiveIdx(newIdx);
-      haptic(6);
+      for (let k = 0; k < crossed; k++) haptic(6);
     }
   }
 
@@ -403,7 +407,7 @@ function DrumRow({ row, active, sortMode = 'value' }) {
       boxShadow: me && active ? 'var(--shadow-card)' : 'none',
       transition: 'background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease',
     }}>
-      <Avatar initial={row.avatar.initial} tone={row.avatar.tone} size={28} ring={me} />
+      <Avatar seed={row.handle} size={28} ring={me} />
 
       {/* Handle */}
       <div style={{
@@ -623,7 +627,7 @@ function UnlockSheet({ row, credits, onConfirm, onCancel, onEarn }) {
 
         {/* Avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-          <Avatar initial={row.avatar.initial} tone={row.avatar.tone} size={48} />
+          <Avatar seed={row.handle} size={48} />
           <div>
             <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.4 }}>{row.handle}</div>
             <div style={{ fontSize: 13, color: 'var(--text-mute)', marginTop: 2 }}>
