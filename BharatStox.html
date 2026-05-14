@@ -25,50 +25,60 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
 <!-- ios-haptics — inline of github.com/tijnjh/ios-haptics
-     iOS fires UIFeedbackGenerator when a click event hits a switch input.
-     label.click() dispatches that event; el.checked= does not. -->
+     iOS path: create a <label><input type=checkbox switch></label>, click it,
+     remove it — iOS fires UIFeedbackGenerator on the switch toggle.
+     Android path: navigator.vibrate (unchanged). -->
 <script>
 (function () {
-  var _ha = typeof window.matchMedia === 'function' &&
+  var supportsHaptics = typeof window.matchMedia === 'function' &&
     window.matchMedia('(pointer: coarse)').matches;
-  var _lbls = [null, null, null];
 
-  function _mk() {
-    _lbls = _lbls.map(function () {
-      var lbl = document.createElement('label');
-      lbl.ariaHidden = 'true';
-      lbl.style.display = 'none';
-      var inp = document.createElement('input');
-      inp.type = 'checkbox';
-      inp.setAttribute('switch', '');
-      lbl.appendChild(inp);
-      document.body.appendChild(lbl);
-      return lbl;
-    });
-  }
-
-  if (document.body) { _mk(); }
-  else { document.addEventListener('DOMContentLoaded', _mk); }
-
-  function _fire(i) {
+  function _haptic() {
     try {
       if (navigator.vibrate) {
-        if (i === 1) { navigator.vibrate([50, 70, 50]); return; }
-        if (i === 2) { navigator.vibrate([50, 70, 50, 70, 50]); return; }
-        navigator.vibrate(50); return;
+        navigator.vibrate(50);
+        return;
       }
-      if (!_ha) return;
-      var lbl = _lbls[i];
-      if (lbl) lbl.click();
+      if (!supportsHaptics) return;
+
+      var labelEl = document.createElement('label');
+      labelEl.ariaHidden = 'true';
+      labelEl.style.display = 'none';
+
+      var inputEl = document.createElement('input');
+      inputEl.type = 'checkbox';
+      inputEl.setAttribute('switch', '');
+      labelEl.appendChild(inputEl);
+
+      document.head.appendChild(labelEl);
+      labelEl.click();
+      document.head.removeChild(labelEl);
     } catch (e) {}
   }
 
-  function haptic() { _fire(0); }
-  haptic.confirm = function () { _fire(1); setTimeout(function () { _fire(1); }, 120); };
-  haptic.error   = function () { _fire(2); setTimeout(function () { _fire(2); }, 120); setTimeout(function () { _fire(2); }, 240); };
+  function haptic() { _haptic(); }
+
+  haptic.confirm = function () {
+    if (navigator.vibrate) {
+      navigator.vibrate([50, 70, 50]);
+      return;
+    }
+    _haptic();
+    setTimeout(function () { _haptic(); }, 120);
+  };
+
+  haptic.error = function () {
+    if (navigator.vibrate) {
+      navigator.vibrate([50, 70, 50, 70, 50]);
+      return;
+    }
+    _haptic();
+    setTimeout(function () { _haptic(); }, 120);
+    setTimeout(function () { _haptic(); }, 240);
+  };
 
   window._iosHaptic = haptic;
-  window._supportsHaptics = _ha;
+  window._supportsHaptics = supportsHaptics;
 })();
 </script>
 
