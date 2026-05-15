@@ -150,16 +150,26 @@ export function PortfolioScreen({ data, isMe = false, onBack, requestedRefresh, 
             {['overview','holdings','activity'].map(t => {
               const active = tab === t;
               const c = TAB_COLORS[t];
+              // Holdings & Activity are content-rich destinations — keep them
+              // gently tinted in their identity colour even when inactive, so
+              // they read as inviting rather than dormant and pull the tap.
+              const tinted = !active && t !== 'overview';
+              const label = t === 'holdings'
+                ? `Holdings · ${data.holdings.length}`
+                : t === 'activity'
+                  ? `Activity · ${data.activity.length}`
+                  : 'Overview';
               return (
                 <button key={t} onClick={() => { if (!active) haptic(); setTab(t); }} style={{
                   padding: '10px 0', background: 'transparent', border: 0, cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2,
-                  color: active ? c : 'var(--text-mute)',
+                  color: active || tinted ? c : 'var(--text-mute)',
+                  opacity: active ? 1 : tinted ? 0.55 : 1,
                   borderBottom: active ? `2px solid ${c}` : '2px solid transparent',
                   marginBottom: -1, whiteSpace: 'nowrap',
-                  transition: 'color 0.15s ease, border-color 0.15s ease',
+                  transition: 'color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease',
                 }}>
-                  {t === 'holdings' ? `Holdings · ${data.holdings.length}` : t === 'overview' ? 'Overview' : 'Activity'}
+                  {label}
                 </button>
               );
             })}

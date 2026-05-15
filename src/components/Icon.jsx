@@ -36,6 +36,10 @@ export function Icon({ name, size = 20, color = 'currentColor', strokeWidth = 1.
     case 'following':  return <svg {...props}><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0"/><path d="M17 12l2 2 4-4"/></svg>;
     case 'list':       return <svg {...props}><circle cx="4" cy="6" r="1.5" fill={color} stroke="none"/><circle cx="4" cy="12" r="1.5" fill={color} stroke="none"/><circle cx="4" cy="18" r="1.5" fill={color} stroke="none"/><path d="M9 6h11M9 12h11M9 18h11"/></svg>;
     case 'picker':     return <svg {...props}><rect x="3" y="10" width="18" height="4" rx="2"/><path d="M7 6h10M7 18h10"/></svg>;
+    case 'map':        return <svg {...props}><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>;
+    case 'minus':      return <svg {...props}><path d="M5 12h14"/></svg>;
+    case 'pin':        return <svg {...props}><path d="M12 21s-7-6-7-11a7 7 0 0114 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>;
+    case 'target':     return <svg {...props}><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="2.2" fill={color} stroke="none"/></svg>;
     default:           return <svg {...props}><circle cx="12" cy="12" r="9"/></svg>;
   }
 }

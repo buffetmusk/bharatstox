@@ -7,11 +7,13 @@ import { Segmented } from '../../components/Segmented';
 import { Icon } from '../../components/Icon';
 import { LeaderboardDrum } from './LeaderboardDrum';
 import { LeaderboardList } from './LeaderboardList';
+import { LeaderboardMap } from './LeaderboardMap';
 import { UnlockSheet } from './UnlockSheet';
 
 const VIEW_OPTIONS = [
   { value: 'drum', label: <Icon name="picker" size={16} /> },
   { value: 'list', label: <Icon name="list" size={16} /> },
+  { value: 'map', label: <Icon name="map" size={16} /> },
 ];
 
 export function Leaderboard({ rows, me, credits, onOpenTrader, onSpendCredits, onOpenCreditLog, onOpenEarnCredits, sort = 'value', onChangeSort }) {
@@ -43,15 +45,20 @@ export function Leaderboard({ rows, me, credits, onOpenTrader, onSpendCredits, o
         <CreditsPill value={credits} onClick={onOpenCreditLog} />
       </div>
 
-      {/* Sort + layout toggles */}
+      {/* Sort + layout toggles — sort is hidden in map view, where it has no
+          meaning; the map carries its own Users / Net worth control instead. */}
       <div style={{ padding: '6px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Segmented
-            value={sort}
-            onChange={v => onChangeSort && onChangeSort(v)}
-            options={[{ value: 'value', label: 'By Value' }, { value: 'gains', label: 'By Gains' }]}
-          />
-        </div>
+        {view === 'map' ? (
+          <div style={{ flex: 1 }} />
+        ) : (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Segmented
+              value={sort}
+              onChange={v => onChangeSort && onChangeSort(v)}
+              options={[{ value: 'value', label: 'By Value' }, { value: 'gains', label: 'By Gains' }]}
+            />
+          </div>
+        )}
         <Segmented
           fullWidth={false}
           value={view}
@@ -61,7 +68,7 @@ export function Leaderboard({ rows, me, credits, onOpenTrader, onSpendCredits, o
       </div>
 
       {/* Active view */}
-      {view === 'drum' ? (
+      {view === 'drum' && (
         <LeaderboardDrum
           sortedRows={sortedRows}
           rows={rows}
@@ -72,13 +79,17 @@ export function Leaderboard({ rows, me, credits, onOpenTrader, onSpendCredits, o
           onRequestUnlock={setConfirmRow}
           onOpenEarnCredits={onOpenEarnCredits}
         />
-      ) : (
+      )}
+      {view === 'list' && (
         <LeaderboardList
           sortedRows={sortedRows}
           sort={sort}
           onOpenTrader={onOpenTrader}
           onRequestUnlock={setConfirmRow}
         />
+      )}
+      {view === 'map' && (
+        <LeaderboardMap onOpenTrader={onOpenTrader} />
       )}
 
       {/* Unlock confirmation sheet — shared by both views */}
